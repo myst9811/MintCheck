@@ -8,3 +8,4 @@ workspace = true
 
 [dependencies]
 auditor-parser = { path = "../auditor-parser" }
+serde = { version = "1", features = ["derive"] }

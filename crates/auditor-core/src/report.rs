@@ -1,49 +1,12 @@
-//! Vulnerability data contracts shared by the detector and reporting
-//! pipelines: the severity scale, individual findings, and the aggregated
-//! audit report.
+//! Audit report aggregation. The finding types (`Severity`,
+//! `Vulnerability`) are owned by `auditor-detectors` and re-exported here,
+//! so existing `auditor_core::report::*` paths keep working.
 
-use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use auditor_parser::ir::SourceSpan;
 use serde::{Deserialize, Serialize};
 
-/// Severity scale for findings. Declaration order drives `Ord`: `Critical`
-/// is the smallest variant so an ascending sort lists it first.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub enum Severity {
-    Critical,
-    High,
-    Medium,
-    Low,
-    Info,
-}
-
-impl fmt::Display for Severity {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let label = match self {
-            Severity::Critical => "Critical",
-            Severity::High => "High",
-            Severity::Medium => "Medium",
-            Severity::Low => "Low",
-            Severity::Info => "Info",
-        };
-        f.write_str(label)
-    }
-}
-
-/// A single security finding produced by a detector.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Vulnerability {
-    /// Detector or registry identifier, e.g. "SWC-101" or "MC-REENTRANCY-001".
-    pub id: String,
-    pub title: String,
-    pub description: String,
-    pub severity: Severity,
-    /// Byte range of the offending code, in the normalized IR's span type.
-    pub span: SourceSpan,
-    pub file_path: String,
-}
+pub use auditor_detectors::finding::{Severity, Vulnerability};
 
 /// Aggregated result of one audit run.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -95,6 +58,7 @@ impl AuditReport {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use auditor_parser::ir::SourceSpan;
 
     fn vuln(id: &str, severity: Severity, start: usize) -> Vulnerability {
         Vulnerability {

@@ -18,6 +18,7 @@ name = "auditor-detectors"
 version = "0.1.0"
 dependencies = [
  "auditor-parser",
+ "serde",
 ]
 
 [[package]]
