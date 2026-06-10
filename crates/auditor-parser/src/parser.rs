@@ -174,13 +174,9 @@ fn parse_members(
             b'}' => depth = depth.saturating_sub(1),
             _ if depth == 0 => {
                 if keyword_at(source, i, "function") {
-                    let span = parse_function_span(source, i)?;
-                    contract.children.push(ASTNode::new(
-                        take_id(next_id),
-                        NodeKind::FunctionDefinition,
-                        span,
-                    ));
-                    i = span.end;
+                    let function = parse_function(source, i, next_id)?;
+                    i = function.span.end;
+                    contract.children.push(function);
                     continue;
                 }
                 if TYPE_KEYWORDS.iter().any(|kw| keyword_at(source, i, kw)) {
@@ -208,21 +204,58 @@ fn parse_members(
     Ok(())
 }
 
-/// Span of one function: from the `function` keyword through its body's
-/// closing brace, or through `;` for a bodyless declaration.
-fn parse_function_span(source: &str, start: usize) -> Result<SourceSpan, ParseError> {
+/// Parses one function: from the `function` keyword through its body's
+/// closing brace (or `;` for a bodyless declaration). Each `;`-terminated
+/// statement at body depth becomes an `Expression` child node.
+fn parse_function(source: &str, start: usize, next_id: &mut usize) -> Result<ASTNode, ParseError> {
     let sig_end = source[start..]
         .find(['{', ';'])
         .map(|i| start + i)
         .ok_or_else(|| ParseError::SyntaxError("unterminated function definition".to_owned()))?;
-    let end = if source.as_bytes()[sig_end] == b'{' {
-        find_matching_brace(source, sig_end).ok_or_else(|| {
-            ParseError::SyntaxError("unbalanced braces in function body".to_owned())
-        })?
-    } else {
-        sig_end
-    };
-    Ok(SourceSpan::new(start, end + 1))
+    if source.as_bytes()[sig_end] != b'{' {
+        let span = SourceSpan::new(start, sig_end + 1);
+        return Ok(ASTNode::new(
+            take_id(next_id),
+            NodeKind::FunctionDefinition,
+            span,
+        ));
+    }
+    let close = find_matching_brace(source, sig_end)
+        .ok_or_else(|| ParseError::SyntaxError("unbalanced braces in function body".to_owned()))?;
+    let mut node = ASTNode::new(
+        take_id(next_id),
+        NodeKind::FunctionDefinition,
+        SourceSpan::new(start, close + 1),
+    );
+
+    let mut depth = 0usize;
+    let mut stmt_start: Option<usize> = None;
+    for (i, &b) in source
+        .as_bytes()
+        .iter()
+        .enumerate()
+        .take(close)
+        .skip(sig_end + 1)
+    {
+        match b {
+            b'{' => depth += 1,
+            b'}' => depth = depth.saturating_sub(1),
+            b';' if depth == 0 => {
+                if let Some(s) = stmt_start.take() {
+                    node.children.push(ASTNode::new(
+                        take_id(next_id),
+                        NodeKind::Expression,
+                        SourceSpan::new(s, i + 1),
+                    ));
+                }
+            }
+            b if depth == 0 && stmt_start.is_none() && !b.is_ascii_whitespace() => {
+                stmt_start = Some(i);
+            }
+            _ => {}
+        }
+    }
+    Ok(node)
 }
 
 #[cfg(test)]
@@ -280,6 +313,31 @@ mod tests {
         let text = &SRC[deposit_start..deposit_close];
         assert!(text.starts_with("function deposit"));
         assert!(text.ends_with('}'));
+    }
+
+    #[test]
+    fn function_bodies_yield_expression_statement_children() {
+        let root = ParserEngine::new()
+            .parse_solidity(SRC)
+            .expect("valid source must parse");
+        let contract = &root.children[0];
+
+        let deposit = &contract.children[2];
+        assert_eq!(deposit.children.len(), 1);
+        let stmt = &deposit.children[0];
+        assert_eq!(stmt.kind, NodeKind::Expression);
+        let stmt_start = SRC.find("balance = balance + 1;").expect("stmt present");
+        assert_eq!(
+            stmt.span,
+            SourceSpan::new(stmt_start, stmt_start + "balance = balance + 1;".len())
+        );
+
+        let get_owner = &contract.children[3];
+        assert_eq!(get_owner.children.len(), 1);
+        assert_eq!(
+            &SRC[get_owner.children[0].span.start..get_owner.children[0].span.end],
+            "return owner;"
+        );
     }
 
     #[test]
