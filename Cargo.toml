@@ -1,0 +1,14 @@
+[workspace]
+members = [
+    "crates/auditor-core",
+    "crates/auditor-parser",
+    "crates/auditor-detectors",
+    "crates/auditor-reporter"
+]
+resolver = "2"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
