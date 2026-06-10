@@ -1,0 +1,10 @@
+[package]
+name = "auditor-reporter"
+version = "0.1.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+[dependencies]
+auditor-detectors = { path = "../auditor-detectors" }

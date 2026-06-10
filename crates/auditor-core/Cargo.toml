@@ -1,0 +1,16 @@
+[package]
+name = "auditor-core"
+version = "0.1.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "mintcheck"
+path = "src/main.rs"
+
+[dependencies]
+auditor-parser = { path = "../auditor-parser" }
+auditor-detectors = { path = "../auditor-detectors" }
+auditor-reporter = { path = "../auditor-reporter" }
