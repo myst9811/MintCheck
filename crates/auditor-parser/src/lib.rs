@@ -4,5 +4,7 @@
 //! owns the normalized IR (see `PROJECT_SPEC.md` §4.1).
 
 pub mod ir;
+pub mod parser;
 
 pub use ir::{ASTNode, NodeKind, SourceSpan};
+pub use parser::{ParseError, ParserEngine};
