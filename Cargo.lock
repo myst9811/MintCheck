@@ -34,6 +34,8 @@ name = "auditor-reporter"
 version = "0.1.0"
 dependencies = [
  "auditor-detectors",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

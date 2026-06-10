@@ -5,8 +5,12 @@
 
 use std::fmt;
 
-use auditor_parser::ir::SourceSpan;
 use serde::{Deserialize, Serialize};
+
+// Re-exported (not merely imported) so downstream crates such as
+// auditor-reporter can name the span type findings carry without taking
+// a direct auditor-parser dependency.
+pub use auditor_parser::ir::SourceSpan;
 
 /// Severity scale for findings. Declaration order drives `Ord`: `Critical`
 /// is the smallest variant so an ascending sort lists it first.
