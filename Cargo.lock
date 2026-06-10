@@ -9,6 +9,8 @@ dependencies = [
  "auditor-detectors",
  "auditor-parser",
  "auditor-reporter",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
